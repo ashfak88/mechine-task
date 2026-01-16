@@ -25,10 +25,10 @@ app.get("/users/:id",auth, async (req, res) => {
 })
 
 app.post("/users",auth, async (req, res) => {
-  const { name, email } = req.body;
+  const { name, email } = req.body
 
   const user = new User({ name, email })
-  await user.save();
+  await user.save()
 
   res.status(201).json(user)
 })
@@ -44,7 +44,7 @@ app.delete("/users/:id",auth, async (req, res) => {
 })
 
 app.post("/login", async (req, res) => {
-  const { email } = req.body;
+  const { email } = req.body
 
   const user = await User.findOne({ email })
   if (!user) {
@@ -57,29 +57,29 @@ app.post("/login", async (req, res) => {
 
 app.post("/register", async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email } = req.body
 
     if (!name || !email) {
-      return res.status(400).json({ message: "Name and email required" });
+      return res.status(400).json({ message: "Name and email required" })
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email })
     if (existingUser) {
-      return res.status(409).json({ message: "User already exists" });
+      return res.status(409).json({ message: "User already exists" })
     }
 
-    const user = new User({ name, email });
-    await user.save();
+    const user = new User({ name, email })
+    await user.save()
 
     res.status(201).json({
       message: "User registered successfully",
       user,
-    });
+    })
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message })
   }
-});
+})
 
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000")
-})
+});
