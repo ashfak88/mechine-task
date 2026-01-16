@@ -1,65 +1,85 @@
-const express = require("express");
-const app = express();
-const jwt = require("jsonwebtoken");
+const express = require("express")
+const jwt = require("jsonwebtoken")
+const connectDB = require("./config-db")
+const User = require("./model")
+const auth = require("./auth-middleware")
 
+const app = express()
+app.use(express.json())
 
-app.use(express.json());
+connectDB()
 
-var users = [
-  { id: 1, name: "ashfak", email: "ashfak@gmal.com" },
-  { id: 2, name: "faheem", email: "faheem@gmal.com" },
-  { id: 3, name: "ashitha", email: "ashitha@gmal.com" },
-];
+app.get("/users",auth, async (req, res) => {
+  const users = await User.find()
+  res.json(users)
+})
 
-app.get("/users", (req, res) => {
-  res.send(users);
-});
+app.get("/users/:id",auth, async (req, res) => {
+  const user = await User.findById(req.params.id)
 
-app.get("/users/:id", (req, res) => {
-  const { id } = req.params;
-  const user = users.find((u) => u.id == id);
   if (!user) {
-    res.status(404).send();
+    return res.status(404).json({ message: "User not found" });
   }
-  res.send(user);
-});
 
-app.post("/users", (req, res) => {
+  res.json(user)
+})
+
+app.post("/users",auth, async (req, res) => {
   const { name, email } = req.body;
-  const user = { id: users.length + 1, name, email };
-  users.push(user);
-  return res.send();
-});
 
-app.delete("/users/:id", (req, res) => {
-  const { id } = req.params;
-  const user = users.find((user) => user.id == id);
-  if (!user) {
-    res.status(404).send();
-  } else {
-     users = users.filter((user) => user.id != id);
-    res.status(200).send(user);
-  }
-});
+  const user = new User({ name, email })
+  await user.save();
 
-app.post("/login", (req, res) => {
-  const { email, name } = req.body;
-  const user = users.find((user) => user.email == email && user.name == name);
+  res.status(201).json(user)
+})
+
+app.delete("/users/:id",auth, async (req, res) => {
+  const user = await User.findByIdAndDelete(req.params.id)
+
   if (!user) {
-    return res.status(401).json({ message: "invalid name and password" });
+    return res.status(404).json({ message: "User not found" })
   }
 
-  const token = jwt.sign({ id: user.id }, "topsecret");
-  return res.json({ message: "login success", token });
-});
+  res.json({ message: "User deleted", user })
+})
 
-app.post("/register", (req, res) => {
-  const { name, email } = req.body;
-  const user = { id: users.length + 1, name, email };
-  users.push(user);
-  res.status(201).send()
+app.post("/login", async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email })
+  if (!user) {
+    return res.status(401).json({ message: "Invalid user" })
+  }
+
+  const token = jwt.sign({ id: user._id }, "topsecret")
+  res.json({ message: "Login success", token })
+})
+
+app.post("/register", async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ message: "Name and email required" });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ message: "User already exists" });
+    }
+
+    const user = new User({ name, email });
+    await user.save();
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(3000, () => {
-  console.log("server running on port http://localhost:3000");
-});
+  console.log("Server running on http://localhost:3000")
+})
